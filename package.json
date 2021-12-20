@@ -1,0 +1,23 @@
+{
+  "name": "chatbot-arduino",
+  "version": "1.0.0",
+  "description": "Integraçao de um Chatbot da Twitch com Arduino",
+  "main": "main.js",
+  "scripts": {
+    "start": "set NODE_ENV=development&&electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Davi-Coelho/chatbot-arduino.git"
+  },
+  "author": "Davi Coelho",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Davi-Coelho/chatbot-arduino/issues"
+  },
+  "homepage": "https://github.com/Davi-Coelho/chatbot-arduino#readme",
+  "devDependencies": {
+    "electron": "^16.0.5",
+    "electron-reloader": "^1.2.1"
+  }
+}
