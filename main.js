@@ -1,4 +1,5 @@
 const { app, BrowserWindow } = require('electron')
+const path = require('path')
 const env = process.env.NODE_ENV || 'development';
 
 if (env === 'development') {
@@ -10,12 +11,17 @@ if (env === 'development') {
     } catch (_) { console.log('Error'); }
 }
 
+
 const createWindow = () => {
     const mainWindow = new BrowserWindow({
         width: 1400,
         height: 600,
         autoHideMenuBar: true,
-        resizable: false
+        resizable: false,
+        webPreferences: {
+            nodeIntegration: true,
+            preload: path.join(__dirname, 'preload.js')
+        }
     })
 
     mainWindow.loadFile('index.html')
