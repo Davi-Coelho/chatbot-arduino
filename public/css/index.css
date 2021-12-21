@@ -28,8 +28,13 @@ body {
     gap: 20px;
 }
 
-tr > th {
-    padding: 10px;
+.commands-table {
+    width: 510px;
+    font-size: 0.9em;
+}
+
+tr > th, tr > td {
+    padding: 5px;
     border: 1px solid black;
 }
 
@@ -41,4 +46,13 @@ tr > th {
     width: 40px;
     border-radius: 50%;
 }
-  
+
+.btn-row-command {
+    border: none;
+    background: none;
+    transition: 0.3s;
+}
+
+.btn-row-command:hover {
+    color: #0d6efd;
+}
