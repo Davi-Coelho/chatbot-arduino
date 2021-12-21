@@ -1,5 +1,4 @@
 const { app, BrowserWindow } = require('electron')
-const path = require('path')
 const env = process.env.NODE_ENV || 'development';
 
 if (env === 'development') {
@@ -19,8 +18,7 @@ const createWindow = () => {
         autoHideMenuBar: true,
         resizable: false,
         webPreferences: {
-            nodeIntegration: true,
-            preload: path.join(__dirname, 'preload.js')
+            nodeIntegration: true
         }
     })
 
