@@ -1,10 +1,28 @@
-const options = {
-    channels: []
-}
-
-const client = new tmi.client(options)
+// CHATBOT VARIABLES
+const client = new tmi.client()
 const commands = []
 
+// CHANNEL VARIABLES
+let channel = ''
+const channelName = document.querySelector('.channel-name')
+const channelBtnConnect = document.querySelector('.channel-btn-connect')
+const btnAddCommand = document.querySelector('.btn-add-command')
+const tableBody = document.querySelector('.table-body')
+
+// USB VARIABLES
+let port = null
+let reader = null
+let encoder = null
+let inputDone = null
+let outputDone = null
+let inputStream = null
+let outputStream = null
+const baudRate = 9600
+const filters = [{ usbVendorId: 0x2341, usbProductId: 0x0043 }];
+const btnDetect = document.querySelector('.usb-btn-detect')
+const labelUsb = document.querySelector('.usb-status')
+
+// CHATBOT DEFINITIONS
 client.on('connected', onConnectedHandler)
 client.on('message', onMessageHandler)
 client.connect()
@@ -15,19 +33,26 @@ function onMessageHandler(target, context, msg, self) {
         return
     }
 
-    const command = msg
+    const firstWord = msg.split(' ')[0]
+    const command = commands.filter(el => el.command === firstWord)[0]
 
-    if (context.badges.hasOwnProperty('broadcaster') || context.mod) {
+    if (command) {
 
+        if (context.badges.hasOwnProperty('broadcaster') || context.mod) {
+            console.log('mod: executar todo comando')
+        }
+        else if (context.subscriber) {
+            if (command.permission === '0' || command.permission === '1') {
+                console.log('sub: executar comando')
+            }
+        }
+        else {
+            if (command.permission === '0') {
+                console.log('any: executar comando')
+            }
+        }
     }
-    else if (context.subscriber) {
 
-    }
-    else {
-
-    }
-
-    console.log('target: ', target)
     console.log('context: ', context)
     console.log('msg: ', msg)
 }
@@ -37,12 +62,7 @@ function onConnectedHandler(address, port) {
     console.log(`* Conectado em ${address}:${port}`)
 }
 
-let channel = ''
-const channelName = document.querySelector('.channel-name')
-const channelBtnConnect = document.querySelector('.channel-btn-connect')
-const btnAddCommand = document.querySelector('.btn-add-command')
-const tableBody = document.querySelector('.table-body')
-
+// CHANNEL FUNCTIONS
 channelBtnConnect.disabled = true
 channelBtnConnect.onclick = connectChannel
 btnAddCommand.onclick = addCommand
@@ -60,7 +80,7 @@ channelName.addEventListener('keyup', (e) => {
 async function connectChannel() {
 
     if (channelBtnConnect.innerHTML === 'Conectar') {
-        await detectUsb(false)
+        await detectUsb()
         if (port) {
             channel = channelName.value.trim()
             if (channel.length > 3) {
@@ -104,10 +124,12 @@ function addCommand() {
     const commandRow = tableBody.insertRow(rowIndex)
 
     const nameCell = commandRow.insertCell(0)
-    const descriptionCell = commandRow.insertCell(1)
-    const actionCell = commandRow.insertCell(2)
+    const permissionCell = commandRow.insertCell(1)
+    const descriptionCell = commandRow.insertCell(2)
+    const actionCell = commandRow.insertCell(3)
 
     const commandInput = document.createElement('input')
+    const permissionSelect = document.createElement('select')
     const descriptionInput = document.createElement('input')
 
     const saveButton = document.createElement('button')
@@ -127,40 +149,68 @@ function addCommand() {
         }
     })
 
-    saveButton.onclick = () => saveCommand(commandRow, nameCell, descriptionCell, saveButton, editButton)
-    editButton.onclick = () => editCommand(commandRow, nameCell, descriptionCell, saveButton, editButton)
+    saveButton.onclick = () => saveCommand(commandRow, nameCell, descriptionCell, saveButton, editButton, permissionSelect)
+    editButton.onclick = () => editCommand(commandRow, nameCell, descriptionCell, saveButton, editButton, permissionSelect)
     removeButton.onclick = () => removeCommand(commandRow)
 
     commandInput.classList.add('input-box')
+    permissionSelect.classList.add('select-box')
     descriptionInput.classList.add('input-box')
 
     saveButton.classList.add('btn-row-command')
     editButton.classList.add('btn-row-command')
     removeButton.classList.add('btn-row-command')
 
+    permissionSelect.innerHTML = `<option value="0">Any User</option>
+                                  <option value="1">Subscriber</option>
+                                  <option value="2">Moderator</option>`
+
     saveButton.innerHTML = `<i class="fas fa-save" title="Salvar"></i>`
     editButton.innerHTML = `<i class="fas fa-edit" title="Editar"></i>`
     removeButton.innerHTML = `<i class="fas fa-trash-alt" title="Remover"></i>`
 
     nameCell.appendChild(commandInput)
+    permissionCell.appendChild(permissionSelect)
     descriptionCell.appendChild(descriptionInput)
+
     actionCell.appendChild(saveButton)
     actionCell.appendChild(editButton)
     actionCell.appendChild(removeButton)
+
+    btnAddCommand.disabled = true
 }
 
-function saveCommand(row, name, description, saveButton, editButton) {
+function saveCommand(row, name, description, saveButton, editButton, permissionSelect) {
 
-    name.childNodes[0].disabled = true
-    description.childNodes[0].disabled = true
-    saveButton.disabled = true
-    editButton.disabled = false
-    commands.push({ command: name.childNodes[0].value })
+    const command = name.childNodes[0].value
+    const permission = permissionSelect.value
+    const hasCommand = commands.filter(el => el.command === command)[0]
+
+    if (!hasCommand) {
+        name.childNodes[0].disabled = true
+        permissionSelect.disabled = true
+        description.childNodes[0].disabled = true
+        saveButton.disabled = true
+        editButton.disabled = false
+
+        if (commands[row.rowIndex - 1]) {
+            commands[row.rowIndex - 1].command = command
+            commands[row.rowIndex - 1].permission = permission
+        }
+        else {
+            commands.push({ command, permission })
+        }
+        btnAddCommand.disabled = false
+    }
+    else {
+        alert('Nome de comando já usado!')
+    }
 }
 
-function editCommand(row, name, description, saveButton, editButton) {
+function editCommand(row, name, description, saveButton, editButton, permissionSelect) {
 
     name.childNodes[0].disabled = false
+    permissionSelect.disabled = false
     description.childNodes[0].disabled = false
     saveButton.disabled = false
     editButton.disabled = true
@@ -169,7 +219,6 @@ function editCommand(row, name, description, saveButton, editButton) {
 function removeCommand(row) {
 
     const rowIndex = row.rowIndex - 1
-    console.log(rowIndex)
 
     if (confirm('Tem certeza que deseja remover esse comando?')) {
         commands.splice(rowIndex, 1)
@@ -185,29 +234,15 @@ function preventWhiteSpace(e) {
     }
 }
 
-let port = null
-let reader = null
-let encoder = null
-let inputDone = null
-let outputDone = null
-let inputStream = null
-let outputStream = null
-
-const baudRate = 9600
-const filters = [{ usbVendorId: 0x2341, usbProductId: 0x0043 }];
-const btnDetect = document.querySelector('.usb-btn-detect')
-const labelUsb = document.querySelector('.usb-status')
-
+// USB FUNCTIONS
 btnDetect.onclick = detectUsb
 
 async function detectUsb(testDetect = true) {
 
     try {
         port = await navigator.serial.requestPort({ filters })
-        if (testDetect) {
-            labelUsb.style.color = 'green'
-            labelUsb.textContent = 'Arduino Uno detectado!'
-        }
+        labelUsb.style.color = 'green'
+        labelUsb.textContent = 'Arduino Uno detectado!'
     }
     catch (e) {
         console.log(e)
