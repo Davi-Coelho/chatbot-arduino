@@ -47,6 +47,11 @@ footer {
     background-color: rgb(58, 58, 58);
     padding: 10px;
     border-radius: 10px;
+    transition: 0.3s;
+}
+
+.data-usb:hover {
+    background-color: rgb(75, 75, 75);
 }
 
 .usb-label, .channel-label {
@@ -99,6 +104,11 @@ footer {
     background-color: rgb(58, 58, 58);
     padding: 10px;
     border-radius: 10px;
+    transition: 0.3s;
+}
+
+.data-channel:hover {
+    background-color: rgb(75, 75, 75);
 }
 
 .channel-name {
@@ -129,6 +139,11 @@ footer {
     overflow: hidden;
     background-color: rgb(58, 58, 58);
     border-radius: 10px;
+    transition: 0.3s;
+}
+
+.commands-table:hover {
+    background-color: rgb(75, 75, 75);
 }
 
 tr > th, tr > td {

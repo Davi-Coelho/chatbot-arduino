@@ -22,7 +22,7 @@ const filters = [{ usbVendorId: 0x2341, usbProductId: 0x0043 }];
 const btnDetect = document.querySelector('.usb-btn-detect')
 const labelUsb = document.querySelector('.usb-status')
 
-// CHATBOT DEFINITIONS
+// CHATBOT FUNCTIONS
 client.on('connected', onConnectedHandler)
 client.on('message', onMessageHandler)
 client.connect()
