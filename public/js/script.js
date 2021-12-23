@@ -19,8 +19,8 @@ let inputStream = null
 let outputStream = null
 const baudRate = 9600
 const filters = [{ usbVendorId: 0x2341, usbProductId: 0x0043 }];
-const btnDetect = document.querySelector('.usb-btn-detect')
 const labelUsb = document.querySelector('.usb-status')
+const btnDetect = document.querySelector('.usb-btn-detect')
 
 // CHATBOT FUNCTIONS
 client.on('connected', onConnectedHandler)
@@ -37,8 +37,7 @@ function onMessageHandler(target, context, msg, self) {
     const command = commands.filter(el => el.command === firstWord)[0]
 
     if (command) {
-
-        if (context.badges.hasOwnProperty('broadcaster') || context.mod) {
+        if (context.badges.hasOwnProperty('broadcaster') || context.mod) {    
             console.log('mod: executar todo comando')
         }
         else if (context.subscriber) {
@@ -69,6 +68,7 @@ btnAddCommand.onclick = addCommand
 
 channelName.addEventListener('keypress', preventWhiteSpace)
 channelName.addEventListener('keyup', (e) => {
+
     if (!!(e.target.value.length > 3)) {
         channelBtnConnect.disabled = false
     }
@@ -123,14 +123,14 @@ function addCommand() {
     const rowIndex = tableBody.rows.length
     const commandRow = tableBody.insertRow(rowIndex)
 
-    const nameCell = commandRow.insertCell(0)
+    const commandCell = commandRow.insertCell(0)
     const permissionCell = commandRow.insertCell(1)
-    const descriptionCell = commandRow.insertCell(2)
+    const typeCell = commandRow.insertCell(2)
     const actionCell = commandRow.insertCell(3)
 
     const commandInput = document.createElement('input')
     const permissionSelect = document.createElement('select')
-    const descriptionInput = document.createElement('input')
+    const typeSelect = document.createElement('select')
 
     const saveButton = document.createElement('button')
     const editButton = document.createElement('button')
@@ -141,6 +141,7 @@ function addCommand() {
 
     commandInput.addEventListener('keypress', preventWhiteSpace)
     commandInput.addEventListener('keyup', (e) => {
+
         if (!!e.target.value.length) {
             saveButton.disabled = false
         }
@@ -149,13 +150,13 @@ function addCommand() {
         }
     })
 
-    saveButton.onclick = () => saveCommand(commandRow, nameCell, descriptionCell, saveButton, editButton, permissionSelect)
-    editButton.onclick = () => editCommand(commandRow, nameCell, descriptionCell, saveButton, editButton, permissionSelect)
+    saveButton.onclick = () => saveCommand(commandRow, commandInput, permissionSelect, typeSelect, saveButton, editButton)
+    editButton.onclick = () => editCommand(commandInput, permissionSelect, typeSelect, saveButton, editButton)
     removeButton.onclick = () => removeCommand(commandRow)
 
     commandInput.classList.add('input-box')
     permissionSelect.classList.add('select-box')
-    descriptionInput.classList.add('input-box')
+    typeSelect.classList.add('select-box')
 
     saveButton.classList.add('btn-row-command')
     editButton.classList.add('btn-row-command')
@@ -164,14 +165,21 @@ function addCommand() {
     permissionSelect.innerHTML = `<option value="0">Any User</option>
                                   <option value="1">Subscriber</option>
                                   <option value="2">Moderator</option>`
+    
+    typeSelect.innerHTML = `<option value="2">ON/OFF  (1)</option>
+                            <option value="3">ON/OFF  (2)</option>
+                            <option value="4">Light   (1)</option>
+                            <option value="5">Light   (2)</option>
+                            <option value="6">Trigger (1)</option>
+                            <option value="7">Trigger (2)</option>`
 
     saveButton.innerHTML = `<i class="fas fa-save" title="Salvar"></i>`
     editButton.innerHTML = `<i class="fas fa-edit" title="Editar"></i>`
     removeButton.innerHTML = `<i class="fas fa-trash-alt" title="Remover"></i>`
 
-    nameCell.appendChild(commandInput)
+    commandCell.appendChild(commandInput)
     permissionCell.appendChild(permissionSelect)
-    descriptionCell.appendChild(descriptionInput)
+    typeCell.appendChild(typeSelect)
 
     actionCell.appendChild(saveButton)
     actionCell.appendChild(editButton)
@@ -180,38 +188,43 @@ function addCommand() {
     btnAddCommand.disabled = true
 }
 
-function saveCommand(row, name, description, saveButton, editButton, permissionSelect) {
+function saveCommand(row, commandInput, permissionSelect, typeSelect, saveButton, editButton) {
 
-    const command = name.childNodes[0].value
+    const rowIndex = row.rowIndex - 1
+    const command = commandInput.value
     const permission = permissionSelect.value
+    const type = typeSelect.value
     const hasCommand = commands.filter(el => el.command === command)[0]
+    
+    if (!hasCommand || commands[rowIndex]) { 
 
-    if (!hasCommand) {
-        name.childNodes[0].disabled = true
-        permissionSelect.disabled = true
-        description.childNodes[0].disabled = true
-        saveButton.disabled = true
-        editButton.disabled = false
-
-        if (commands[row.rowIndex - 1]) {
-            commands[row.rowIndex - 1].command = command
-            commands[row.rowIndex - 1].permission = permission
+        if (commands[rowIndex]) {            
+            commands[rowIndex].command = command
+            commands[rowIndex].permission = permission
+            commands[rowIndex].type = type
         }
         else {
-            commands.push({ command, permission })
+            commands.push({ command, permission, type })
         }
+
+        commandInput.disabled = true
+        permissionSelect.disabled = true
+        typeSelect.disabled = true
+        saveButton.disabled = true
+        editButton.disabled = false
         btnAddCommand.disabled = false
     }
     else {
         alert('Nome de comando já usado!')
     }
+
 }
 
-function editCommand(row, name, description, saveButton, editButton, permissionSelect) {
+function editCommand(commandInput, permissionSelect, typeSelect, saveButton, editButton) {
 
-    name.childNodes[0].disabled = false
+    commandInput.disabled = false
     permissionSelect.disabled = false
-    description.childNodes[0].disabled = false
+    typeSelect.disabled = false
     saveButton.disabled = false
     editButton.disabled = true
 }
@@ -229,6 +242,7 @@ function removeCommand(row) {
 function preventWhiteSpace(e) {
 
     const key = e.keyCode
+
     if (key === 32) {
         e.preventDefault()
     }
@@ -293,6 +307,7 @@ async function disconnectUsb() {
 function writeToStream(...lines) {
 
     const writer = outputStream.getWriter()
+
     lines.forEach(line => {
         writer.write(line + '\n')
     })
