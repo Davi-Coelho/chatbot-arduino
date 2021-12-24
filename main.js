@@ -14,7 +14,7 @@ if (env === 'development') {
 const createWindow = () => {
     const mainWindow = new BrowserWindow({
         width: 1400,
-        height: 600,
+        height: 700,
         resizable: false,
         webPreferences: {
             nodeIntegration: true

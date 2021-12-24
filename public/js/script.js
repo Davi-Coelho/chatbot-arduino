@@ -4,6 +4,7 @@ const commands = []
 
 // CHANNEL VARIABLES
 let channel = ''
+const commandsMaxLimit = 6
 const channelName = document.querySelector('.channel-name')
 const channelBtnConnect = document.querySelector('.channel-btn-connect')
 const btnAddCommand = document.querySelector('.btn-add-command')
@@ -18,7 +19,7 @@ let outputDone = null
 let inputStream = null
 let outputStream = null
 const baudRate = 9600
-const filters = [{ usbVendorId: 0x2341, usbProductId: 0x0043 }];
+const filters = [{ usbVendorId: 0x2341, usbProductId: 0x0043 }] // Arduino UNO
 const labelUsb = document.querySelector('.usb-status')
 const btnDetect = document.querySelector('.usb-btn-detect')
 
@@ -27,33 +28,37 @@ client.on('connected', onConnectedHandler)
 client.on('message', onMessageHandler)
 client.connect()
 
-function onMessageHandler(target, context, msg, self) {
+function onMessageHandler(channel, tags, message, self) {
 
     if (self) {
         return
     }
 
-    const firstWord = msg.split(' ')[0]
-    const command = commands.filter(el => el.command === firstWord)[0]
+    const splittedMessage = message.split(' ')
+    let command = commands.filter(el => el.command === splittedMessage[0])[0]
+
+    if (splittedMessage.length > 1 && (command.type === '4' || command.type === '5')) {
+        command.type += '-' + splittedMessage[1]
+    }
 
     if (command) {
-        if (context.badges.hasOwnProperty('broadcaster') || context.mod) {    
-            console.log('mod: executar todo comando')
+
+        if (tags.badges.hasOwnProperty('broadcaster') || tags.mod) {
+            writeToStream(command.type)
         }
-        else if (context.subscriber) {
+        else if (tags.subscriber) {
+
             if (command.permission === '0' || command.permission === '1') {
-                console.log('sub: executar comando')
+                writeToStream(command.type)
             }
         }
         else {
+
             if (command.permission === '0') {
-                console.log('any: executar comando')
+                writeToStream(command.type)
             }
         }
     }
-
-    console.log('context: ', context)
-    console.log('msg: ', msg)
 }
 
 function onConnectedHandler(address, port) {
@@ -121,71 +126,76 @@ async function connectChannel() {
 function addCommand() {
 
     const rowIndex = tableBody.rows.length
-    const commandRow = tableBody.insertRow(rowIndex)
+    if (rowIndex < commandsMaxLimit) {
+        const commandRow = tableBody.insertRow(rowIndex)
 
-    const commandCell = commandRow.insertCell(0)
-    const permissionCell = commandRow.insertCell(1)
-    const typeCell = commandRow.insertCell(2)
-    const actionCell = commandRow.insertCell(3)
+        const commandCell = commandRow.insertCell(0)
+        const permissionCell = commandRow.insertCell(1)
+        const typeCell = commandRow.insertCell(2)
+        const actionCell = commandRow.insertCell(3)
 
-    const commandInput = document.createElement('input')
-    const permissionSelect = document.createElement('select')
-    const typeSelect = document.createElement('select')
+        const commandInput = document.createElement('input')
+        const permissionSelect = document.createElement('select')
+        const typeSelect = document.createElement('select')
 
-    const saveButton = document.createElement('button')
-    const editButton = document.createElement('button')
-    const removeButton = document.createElement('button')
+        const saveButton = document.createElement('button')
+        const editButton = document.createElement('button')
+        const removeButton = document.createElement('button')
 
-    editButton.disabled = true
-    saveButton.disabled = true
+        editButton.disabled = true
+        saveButton.disabled = true
 
-    commandInput.addEventListener('keypress', preventWhiteSpace)
-    commandInput.addEventListener('keyup', (e) => {
+        commandInput.addEventListener('keypress', preventWhiteSpace)
+        commandInput.addEventListener('keyup', (e) => {
 
-        if (!!e.target.value.length) {
-            saveButton.disabled = false
-        }
-        else {
-            saveButton.disabled = true
-        }
-    })
+            if (!!e.target.value.length) {
+                saveButton.disabled = false
+            }
+            else {
+                saveButton.disabled = true
+            }
+        })
 
-    saveButton.onclick = () => saveCommand(commandRow, commandInput, permissionSelect, typeSelect, saveButton, editButton)
-    editButton.onclick = () => editCommand(commandInput, permissionSelect, typeSelect, saveButton, editButton)
-    removeButton.onclick = () => removeCommand(commandRow)
+        saveButton.onclick = () => saveCommand(commandRow, commandInput, permissionSelect, typeSelect, saveButton, editButton)
+        editButton.onclick = () => editCommand(commandInput, permissionSelect, typeSelect, saveButton, editButton)
+        removeButton.onclick = () => removeCommand(commandRow)
 
-    commandInput.classList.add('input-box')
-    permissionSelect.classList.add('select-box')
-    typeSelect.classList.add('select-box')
+        commandInput.classList.add('input-box')
+        permissionSelect.classList.add('select-box')
+        typeSelect.classList.add('select-box')
 
-    saveButton.classList.add('btn-row-command')
-    editButton.classList.add('btn-row-command')
-    removeButton.classList.add('btn-row-command')
+        saveButton.classList.add('btn-row-command')
+        editButton.classList.add('btn-row-command')
+        removeButton.classList.add('btn-row-command')
 
-    permissionSelect.innerHTML = `<option value="0">Any User</option>
+        permissionSelect.innerHTML = `<option value="0">Any User</option>
                                   <option value="1">Subscriber</option>
                                   <option value="2">Moderator</option>`
-    
-    typeSelect.innerHTML = `<option value="2">ON/OFF  (1)</option>
+
+        typeSelect.innerHTML = `<option value="2">ON/OFF  (1)</option>
                             <option value="3">ON/OFF  (2)</option>
                             <option value="4">Light   (1)</option>
                             <option value="5">Light   (2)</option>
                             <option value="6">Trigger (1)</option>
                             <option value="7">Trigger (2)</option>`
 
-    saveButton.innerHTML = `<i class="fas fa-save" title="Salvar"></i>`
-    editButton.innerHTML = `<i class="fas fa-edit" title="Editar"></i>`
-    removeButton.innerHTML = `<i class="fas fa-trash-alt" title="Remover"></i>`
+        saveButton.innerHTML = `<i class="fas fa-save" title="Salvar"></i>`
+        editButton.innerHTML = `<i class="fas fa-edit" title="Editar"></i>`
+        removeButton.innerHTML = `<i class="fas fa-trash-alt" title="Remover"></i>`
 
-    commandCell.appendChild(commandInput)
-    permissionCell.appendChild(permissionSelect)
-    typeCell.appendChild(typeSelect)
+        commandCell.appendChild(commandInput)
+        permissionCell.appendChild(permissionSelect)
+        typeCell.appendChild(typeSelect)
 
-    actionCell.appendChild(saveButton)
-    actionCell.appendChild(editButton)
-    actionCell.appendChild(removeButton)
+        actionCell.appendChild(saveButton)
+        actionCell.appendChild(editButton)
+        actionCell.appendChild(removeButton)
 
-    btnAddCommand.disabled = true
+        btnAddCommand.disabled = true
+    }
+    else {
+        alert('Limite de comandos alcançado!')
+    }
 }
 
 function saveCommand(row, commandInput, permissionSelect, typeSelect, saveButton, editButton) {
@@ -194,25 +204,33 @@ function saveCommand(row, commandInput, permissionSelect, typeSelect, saveButton
     const command = commandInput.value
     const permission = permissionSelect.value
     const type = typeSelect.value
-    const hasCommand = commands.filter(el => el.command === command)[0]
-    
-    if (!hasCommand || commands[rowIndex]) { 
+    let hasCommand = commands.findIndex((el, i) => (el.command === command) && (i !== rowIndex))
+    let hasType = commands.findIndex((el, i) => (el.type === type) && (i !== rowIndex))
 
-        if (commands[rowIndex]) {            
-            commands[rowIndex].command = command
-            commands[rowIndex].permission = permission
-            commands[rowIndex].type = type
+    if (hasCommand === -1) {
+
+        if (hasType === -1){
+
+            if (commands[rowIndex]) {
+                commands[rowIndex].command = command
+                commands[rowIndex].permission = permission
+                commands[rowIndex].type = type
+            }
+            else {
+                commands.push({ command, permission, type })
+            }
+    
+            commandInput.disabled = true
+            permissionSelect.disabled = true
+            typeSelect.disabled = true
+            saveButton.disabled = true
+            editButton.disabled = false
+            btnAddCommand.disabled = false
         }
         else {
-            commands.push({ command, permission, type })
+            alert('Tipo já usado!')
         }
 
-        commandInput.disabled = true
-        permissionSelect.disabled = true
-        typeSelect.disabled = true
-        saveButton.disabled = true
-        editButton.disabled = false
-        btnAddCommand.disabled = false
     }
     else {
         alert('Nome de comando já usado!')
@@ -258,8 +276,8 @@ async function detectUsb(testDetect = true) {
         labelUsb.style.color = 'green'
         labelUsb.textContent = 'Arduino Uno detectado!'
     }
-    catch (e) {
-        console.log(e)
+    catch (error) {
+        console.log(error)
     }
 }
 
@@ -269,8 +287,8 @@ async function connectUsb() {
         port = await navigator.serial.requestPort({ filters })
         await port.open({ baudRate })
     }
-    catch (e) {
-        console.log(e)
+    catch (error) {
+        console.log(error)
     }
 
     console.log('USB conectado!')
@@ -283,12 +301,13 @@ async function connectUsb() {
 async function disconnectUsb() {
 
     if (outputStream) {
+
         try {
             await outputStream.getWriter().close()
             await outputDone
         }
-        catch (e) {
-            console.log(e)
+        catch (error) {
+            console.log(error)
         }
         outputStream = null
         outputDone = null
@@ -297,9 +316,10 @@ async function disconnectUsb() {
     try {
         await port.close()
     }
-    catch (e) {
-        console.log(e)
+    catch (error) {
+        console.log(error)
     }
+
     port = null
     console.log('USB desconectado!')
 }
@@ -311,5 +331,6 @@ function writeToStream(...lines) {
     lines.forEach(line => {
         writer.write(line + '\n')
     })
+
     writer.releaseLock()
 }
