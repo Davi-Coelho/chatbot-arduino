@@ -1,6 +1,6 @@
 // CHATBOT VARIABLES
 const client = new tmi.client()
-const commands = []
+let commands = []
 
 // CHANNEL VARIABLES
 let channel = ''
@@ -82,6 +82,31 @@ channelName.addEventListener('keyup', (e) => {
     }
 })
 
+async function loadConfig() {
+    channel = await window.api.loadChannel()
+    commands = await window.api.loadAllCommands()
+
+    if (channel) {
+        channelName.value = channel
+        channelBtnConnect.disabled = false
+    }
+
+    if (commands) {
+        commands.forEach(command => {
+            const currentCommand = addCommand()
+            currentCommand.commandInput.value = command.command
+            currentCommand.permissionSelect.value = command.permission
+            currentCommand.typeSelect.value = command.type
+            saveCommand(currentCommand.commandRow, currentCommand.commandInput,
+                currentCommand.permissionSelect, currentCommand.typeSelect,
+                currentCommand.saveButton, currentCommand.editButton, true)
+        })
+    }
+    else {
+        commands = []
+    }
+}
+
 async function connectChannel() {
 
     if (channelBtnConnect.innerHTML === 'Conectar') {
@@ -96,6 +121,7 @@ async function connectChannel() {
                     channelBtnConnect.classList.add('connected')
                     channelBtnConnect.innerHTML = 'Desconectar'
                     await connectUsb()
+                    window.api.saveChannel(channel)
                 }).catch(error => {
                     console.log(error)
                 })
@@ -192,15 +218,16 @@ function addCommand() {
         actionCell.appendChild(removeButton)
 
         btnAddCommand.disabled = true
+        return { commandRow, commandInput, permissionSelect, typeSelect, saveButton, editButton }
     }
     else {
         alert('Limite de comandos alcançado!')
     }
 }
 
-function saveCommand(row, commandInput, permissionSelect, typeSelect, saveButton, editButton) {
+function saveCommand(commandRow, commandInput, permissionSelect, typeSelect, saveButton, editButton, loadConfig = false) {
 
-    const rowIndex = row.rowIndex - 1
+    const rowIndex = commandRow.rowIndex - 1
     const command = commandInput.value
     const permission = permissionSelect.value
     const type = typeSelect.value
@@ -209,17 +236,26 @@ function saveCommand(row, commandInput, permissionSelect, typeSelect, saveButton
 
     if (hasCommand === -1) {
 
-        if (hasType === -1){
+        if (hasType === -1) {
 
             if (commands[rowIndex]) {
                 commands[rowIndex].command = command
                 commands[rowIndex].permission = permission
                 commands[rowIndex].type = type
+                window.api.editCommand(rowIndex, commands[rowIndex])
             }
             else {
                 commands.push({ command, permission, type })
+
+                if (!loadConfig) {
+                    window.api.saveCommand({
+                        command: command,
+                        permission: permission,
+                        type: type
+                    })
+                }
             }
-    
+
             commandInput.disabled = true
             permissionSelect.disabled = true
             typeSelect.disabled = true
@@ -254,6 +290,7 @@ function removeCommand(row) {
     if (confirm('Tem certeza que deseja remover esse comando?')) {
         commands.splice(rowIndex, 1)
         tableBody.deleteRow(rowIndex)
+        window.api.deleteCommand(rowIndex)
     }
 }
 
@@ -269,7 +306,7 @@ function preventWhiteSpace(e) {
 // USB FUNCTIONS
 btnDetect.onclick = detectUsb
 
-async function detectUsb(testDetect = true) {
+async function detectUsb() {
 
     try {
         port = await navigator.serial.requestPort({ filters })
@@ -334,3 +371,5 @@ function writeToStream(...lines) {
 
     writer.releaseLock()
 }
+
+loadConfig()
