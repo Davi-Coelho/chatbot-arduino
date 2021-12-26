@@ -1,4 +1,9 @@
 const { app, BrowserWindow, Menu, ipcMain } = require('electron')
+
+if (require('electron-squirrel-startup')) {
+    return app.quit();
+} 
+
 const Store = require('electron-store')
 const path = require('path')
 const env = process.env.NODE_ENV || 'development';
